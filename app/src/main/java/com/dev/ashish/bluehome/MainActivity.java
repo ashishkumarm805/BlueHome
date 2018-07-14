@@ -21,12 +21,11 @@ import android.widget.Toast;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     BluetoothAdapter mBluetoothAdapter;
-    Button mBluetoothEnable;
     private final BroadcastReceiver mBroadcastReceiver1 = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if(action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)){
+            if(action!=null&&action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)){
                 final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
 
                 switch(state){
@@ -51,7 +50,41 @@ public class MainActivity extends AppCompatActivity {
 
                 }
             }
+        }
+    };
+    private BroadcastReceiver mBroadcastReceiver2 = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            if(action!=null&&action.equals(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED)){
+                final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_SCAN_MODE, BluetoothAdapter.ERROR);
 
+                switch(state){
+                    case BluetoothAdapter.SCAN_MODE_CONNECTABLE:
+                        Log.d(TAG, "onReceive-CONNECTIBLE: Bluetooth is Connectible");
+                        Snackbar.make(findViewById(R.id.main_layout),"Connectible",Snackbar.LENGTH_SHORT).show();
+                        break;
+                    case BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE:
+                        Log.d(TAG, "onReceive-SCAN_MODE_: Bluetooth is Discoverable and Connectible");
+                        Snackbar.make(findViewById(R.id.main_layout),"Bluetooth is Discoverable and Connectible",Snackbar.LENGTH_SHORT).show();
+                        break;
+                    case BluetoothAdapter.SCAN_MODE_NONE:
+                        Log.d(TAG, "onReceive-NONE: Bluetooth is invisible");
+                        Snackbar.make(findViewById(R.id.main_layout),"Invisible",Snackbar.LENGTH_SHORT).show();
+                        break;
+                    case BluetoothAdapter.STATE_CONNECTING:
+                        Log.d(TAG, "onReceive-STATE_CONNECTING: Connecting....");
+                        Snackbar.make(findViewById(R.id.main_layout),"Connecting....",Snackbar.LENGTH_SHORT).show();
+                        break;
+                    case BluetoothAdapter.STATE_CONNECTED:
+                        Log.d(TAG, "onReceive-STATE_CONNECTED: Connected");
+                        Snackbar.make(findViewById(R.id.main_layout),"Connected",Snackbar.LENGTH_SHORT).show();
+                        break;
+                    default:
+                        break;
+
+                }
+            }
 
 
         }
@@ -63,18 +96,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        mBluetoothEnable = findViewById(R.id.bluetooth_enable_main_switch);
-        mBluetoothEnable.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                enableDisableBluetooth();
-            }
-        });
+        enableDisableBluetooth();
     }
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if(mBluetoothAdapter.isEnabled()){
+            mBluetoothAdapter.disable();
+            }
         unregisterReceiver(mBroadcastReceiver1);
+        unregisterReceiver(mBroadcastReceiver2);
     }
 
     public void enableDisableBluetooth() {
@@ -92,17 +123,24 @@ public class MainActivity extends AppCompatActivity {
                 IntentFilter BTIntent=new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
                 registerReceiver(mBroadcastReceiver1,BTIntent);
                 Snackbar.make(findViewById(R.id.main_layout),"Enabled Bluetooth",Snackbar.LENGTH_SHORT).show();
+                enableBluetoothDiscovery();
 
                 }
-        if(mBluetoothAdapter.isEnabled()){
-            Log.d(TAG,"enableDisableBT:DisablingBT");
-            mBluetoothAdapter.disable();
-            IntentFilter BTIntent=new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-            registerReceiver(mBroadcastReceiver1,BTIntent);
-            Snackbar.make(findViewById(R.id.main_layout),"Disabled Bluetooth",Snackbar.LENGTH_SHORT).show();
+
 
         }
-        }
+
+    public void enableBluetoothDiscovery() {
+        Log.d(TAG," btnEnableDisable_Discoverable:Making device discoverable for 300 seconds");
+        Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
+        startActivity(discoverableIntent);
+
+
+        IntentFilter intentFilter = new IntentFilter(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED);
+        registerReceiver(mBroadcastReceiver2,intentFilter);
+        Snackbar.make(findViewById(R.id.main_layout),"Dicovery enabled for 300 secs",Snackbar.LENGTH_SHORT).show();
+    }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void checkBTPermissions() {
